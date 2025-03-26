@@ -595,7 +595,6 @@ export default function FocusSoundMixer() {
         </div>
         <div className="space-y-4 border-t pt-4">
           <h3 className="text-lg font-medium text-center">
-            <Leaf className="inline h-5 w-5 mr-1.5" />
             Nature
           </h3>
           <div className="grid grid-cols-3 gap-1 md:gap-2">
@@ -624,10 +623,10 @@ export default function FocusSoundMixer() {
               <Label>Volume</Label>
               <div className="flex items-center gap-2">
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
                   onClick={() => toggleCategoryPlayback("nature")}
-                  className="h-8 w-8 p-0"
+                  className="h-8 w-8 p-0 shadow-sm hover:shadow-md transition-all duration-200 bg-secondary/30 hover:bg-secondary/50"
                   aria-label={
                     playingStates.nature
                       ? "Pause nature"
@@ -663,7 +662,6 @@ export default function FocusSoundMixer() {
         </div>
         <div className="space-y-4 border-t pt-4">
           <h3 className="text-lg font-medium text-center">
-            <Wind className="inline h-5 w-5 mr-1.5" />
             White Noise
           </h3>
           <div className="grid grid-cols-3 gap-1 md:gap-2">
@@ -692,10 +690,10 @@ export default function FocusSoundMixer() {
               <Label>Volume</Label>
               <div className="flex items-center gap-2">
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
                   onClick={() => toggleCategoryPlayback("whiteNoise")}
-                  className="h-8 w-8 p-0"
+                  className="h-8 w-8 p-0 shadow-sm hover:shadow-md transition-all duration-200 bg-secondary/30 hover:bg-secondary/50"
                   aria-label={
                     playingStates.whiteNoise
                       ? "Pause white noise"
@@ -731,7 +729,6 @@ export default function FocusSoundMixer() {
         </div>
         <div className="space-y-4 border-t pt-4">
           <h3 className="text-lg font-medium text-center">
-            <Music className="inline h-5 w-5 mr-1.5" />
             Melody
           </h3>
           <div className="grid grid-cols-3 gap-1 md:gap-2">
@@ -758,10 +755,10 @@ export default function FocusSoundMixer() {
               <Label>Volume</Label>
               <div className="flex items-center gap-2">
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
                   onClick={() => toggleCategoryPlayback("melody")}
-                  className="h-8 w-8 p-0"
+                  className="h-8 w-8 p-0 shadow-sm hover:shadow-md transition-all duration-200 bg-secondary/30 hover:bg-secondary/50"
                   aria-label={
                     playingStates.melody
                       ? "Pause melody"
@@ -797,7 +794,6 @@ export default function FocusSoundMixer() {
         </div>
       </CardContent>
       <CardFooter className="flex flex-col items-center gap-2">
-        <p className="text-sm text-muted-foreground">Adjust for your mix</p>
         <ClientOnly>
           {!audioContextUnlocked && isMounted && (
             <div className="text-xs text-amber-500 text-center mt-2">
