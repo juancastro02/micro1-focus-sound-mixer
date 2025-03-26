@@ -1,28 +1,27 @@
-import type React from "react"
-import "@/app/globals.css"
-import type { Metadata } from "next"
-import { Inter } from "next/font/google"
+import type React from "react";
+import { Toaster } from "sonner";
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"] })
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Focus Sound Mixer",
-  description: "Mix nature sounds, white noise, and melodies for the perfect focus environment",
-  generator: "v0.dev",
-}
+  description: "Create your perfect focus environment with custom sound mixes",
+};
 
 export default function RootLayout({
   children,
-}: {
-  children: React.ReactNode
-}) {
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
-    <html lang="en" className="light">
-      <body className="bg-white text-foreground">
+    <html lang="en">
+      <body className={inter.className}>
         {children}
+        <Toaster position="top-center" />
       </body>
     </html>
-  )
+  );
 }
-
-import "./globals.css"
