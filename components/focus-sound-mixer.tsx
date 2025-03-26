@@ -18,7 +18,7 @@ import {
   Volume2,
   VolumeX,
   Play,
-  Pause,
+  RotateCcw,
   Leaf,
   Wind,
   Music,
@@ -521,7 +521,7 @@ export default function FocusSoundMixer() {
               aria-label={isPlaying ? "Pause sound" : "Play sound"}
             >
               {isPlaying ? (
-                <Pause className="h-5 w-5" />
+                <RotateCcw className="h-5 w-5" />
               ) : (
                 <Play className="h-5 w-5" />
               )}
