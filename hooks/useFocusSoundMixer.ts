@@ -13,17 +13,14 @@ export default function useFocusSoundMixer() {
   const [whiteNoiseVolume, setWhiteNoiseVolume] = useState(30);
   const [melodyVolume, setMelodyVolume] = useState(20);
   const [masterVolume, setMasterVolume] = useState(80);
-
   const [isNaturePlaying, setIsNaturePlaying] = useState(false);
   const [isWhiteNoisePlaying, setIsWhiteNoisePlaying] = useState(false);
   const [isMelodyPlaying, setIsMelodyPlaying] = useState(false);
-
   const [selectedTracks, setSelectedTracks] = useState({
     nature: SOUND_CATEGORIES.nature[0].id,
     whiteNoise: SOUND_CATEGORIES.whiteNoise[0].id,
     melody: SOUND_CATEGORIES.melody[0].id,
   });
-
   const [audioStatus, setAudioStatus] = useState<{
     [key in SoundCategory]: AudioStatus;
   }>({
@@ -31,20 +28,25 @@ export default function useFocusSoundMixer() {
     whiteNoise: { loaded: false, error: null },
     melody: { loaded: false, error: null },
   });
-
   const natureHowlRef = useRef<Howl | null>(null);
   const whiteNoiseHowlRef = useRef<Howl | null>(null);
   const melodyHowlRef = useRef<Howl | null>(null);
-
   const [audioContextUnlocked, setAudioContextUnlocked] = useState(false);
+
+  function getRef(category: SoundCategory) {
+    if (category === "nature") return natureHowlRef;
+    if (category === "whiteNoise") return whiteNoiseHowlRef;
+    return melodyHowlRef;
+  }
+
   useEffect(() => {
     if (Howler.ctx?.state !== "running") {
       Howler.ctx.resume().then(() => setAudioContextUnlocked(true));
     } else {
       setAudioContextUnlocked(true);
     }
-    const unlockEvents = ["click", "touchstart", "keydown"];
-    const unlockHandler = () => {
+    const events = ["click", "touchstart", "keydown"];
+    const handler = () => {
       if (Howler.ctx?.state !== "running") {
         Howler.ctx
           .resume()
@@ -53,67 +55,53 @@ export default function useFocusSoundMixer() {
       } else {
         setAudioContextUnlocked(true);
       }
-      unlockEvents.forEach((evt) =>
-        document.removeEventListener(evt, unlockHandler)
-      );
+      events.forEach((e) => document.removeEventListener(e, handler));
     };
-    unlockEvents.forEach((evt) =>
-      document.addEventListener(evt, unlockHandler, { once: true })
-    );
-
+    events.forEach((e) => document.addEventListener(e, handler, { once: true }));
     return () => {
-      unlockEvents.forEach((evt) =>
-        document.removeEventListener(evt, unlockHandler)
-      );
+      events.forEach((e) => document.removeEventListener(e, handler));
     };
   }, []);
 
-
-  function getRef(category: SoundCategory) {
-    if (category === "nature") return natureHowlRef;
-    if (category === "whiteNoise") return whiteNoiseHowlRef;
-    return melodyHowlRef;
-  }
-
-  function createHowl(category: SoundCategory, trackId: string): Howl | null {
-    const soundData = SOUND_URLS[category][trackId];
-    if (!soundData) {
-      setAudioStatus((prev) => ({
-        ...prev,
-        [category]: {
-          loaded: false,
-          error: `No URL found for ${trackId}`,
-        },
+  function createHowl(cat: SoundCategory, trackId: string): Howl | null {
+    const data = SOUND_URLS[cat][trackId];
+    if (!data) {
+      setAudioStatus((p) => ({
+        ...p,
+        [cat]: { loaded: false, error: "No URL found for track" },
       }));
       return null;
     }
-
-    const srcArr: string[] = [];
-    if (soundData.local) srcArr.push(soundData.local);
-    if (soundData.fallback) srcArr.push(soundData.fallback);
-    if (soundData.alternate) srcArr.push(soundData.alternate);
-
-    setAudioStatus((prev) => ({
-      ...prev,
-      [category]: { loaded: false, error: null },
+    const sources: string[] = [];
+    if (data.local) sources.push(data.local);
+    if (data.fallback) sources.push(data.fallback);
+    if (data.alternate) sources.push(data.alternate);
+    setAudioStatus((p) => ({
+      ...p,
+      [cat]: { loaded: false, error: null },
     }));
-
-    const newHowl = new Howl({
-      src: srcArr,
+    const masterMultiplier = masterVolume / 100;
+    let categoryVolume = 0;
+    if (cat === "nature") categoryVolume = natureVolume / 100;
+    if (cat === "whiteNoise") categoryVolume = whiteNoiseVolume / 100;
+    if (cat === "melody") categoryVolume = melodyVolume / 100;
+    const initialVolume = categoryVolume * masterMultiplier;
+    const howl = new Howl({
+      src: sources,
       loop: true,
       html5: true,
-      volume: 0,
+      volume: initialVolume,
       onload: () => {
-        setAudioStatus((prev) => ({
-          ...prev,
-          [category]: { loaded: true, error: null },
+        setAudioStatus((p) => ({
+          ...p,
+          [cat]: { loaded: true, error: null },
         }));
-        updateVolume(category, newHowl);
+        updateVolume(cat, howl);
       },
       onloaderror: () => {
-        setAudioStatus((prev) => ({
-          ...prev,
-          [category]: { loaded: false, error: "Failed to load audio" },
+        setAudioStatus((p) => ({
+          ...p,
+          [cat]: { loaded: false, error: "Failed to load audio" },
         }));
       },
       onplayerror: () => {
@@ -122,37 +110,37 @@ export default function useFocusSoundMixer() {
             .resume()
             .then(() => {
               setAudioContextUnlocked(true);
-              setTimeout(() => newHowl.play(), 100);
+              updateVolume(cat, howl);
+              setTimeout(() => howl.play(), 100);
             })
             .catch(() => {
-              setAudioStatus((prev) => ({
-                ...prev,
-                [category]: {
-                  ...prev[category],
-                  error: "Please interact with the page to enable audio",
+              setAudioStatus((p) => ({
+                ...p,
+                [cat]: {
+                  ...p[cat],
+                  error: "Interact with the page to enable audio",
                 },
               }));
             });
         } else {
-          setAudioStatus((prev) => ({
-            ...prev,
-            [category]: {
-              ...prev[category],
+          setAudioStatus((p) => ({
+            ...p,
+            [cat]: {
+              ...p[cat],
               error: "Failed to play audio",
             },
           }));
         }
       },
     });
-
-    return newHowl;
+    return howl;
   }
 
-  function updateVolume(category: SoundCategory, howl?: Howl) {
+  function updateVolume(cat: SoundCategory, howl?: Howl) {
     const masterMult = masterVolume / 100;
     let catVol = 0;
-
-    switch (category) {
+    
+    switch(cat) {
       case "nature":
         catVol = natureVolume / 100;
         break;
@@ -163,15 +151,22 @@ export default function useFocusSoundMixer() {
         catVol = melodyVolume / 100;
         break;
     }
-
-    const refHowl = howl || getRef(category).current;
-    if (refHowl) {
-      refHowl.volume(catVol * masterMult);
+    
+    const finalVolume = Math.min(1, Math.max(0, catVol * masterMult));
+    
+    if (howl && typeof howl.volume === 'function') {
+      howl.volume(finalVolume);
+      return;
+    }
+    
+    const ref = getRef(cat);
+    if (ref.current && typeof ref.current.volume === 'function') {
+      ref.current.volume(finalVolume);
     }
   }
 
-  function stopAndUnload(category: SoundCategory) {
-    const ref = getRef(category);
+  function stopAndUnload(cat: SoundCategory) {
+    const ref = getRef(cat);
     if (ref.current) {
       ref.current.stop();
       ref.current.unload();
@@ -181,59 +176,167 @@ export default function useFocusSoundMixer() {
 
   useEffect(() => {
     const ref = natureHowlRef;
+    const track = selectedTracks.nature;
     if (isNaturePlaying) {
       if (!ref.current) {
-        ref.current = createHowl("nature", selectedTracks.nature);
-        ref.current?.play();
-      } else {
+        ref.current = createHowl("nature", track);
+        if (ref.current && audioContextUnlocked) {
+          updateVolume("nature", ref.current);
+          ref.current.play();
+        }
+      } else if (!ref.current.playing()) {
+        updateVolume("nature", ref.current);
         ref.current.play();
       }
     } else {
-      stopAndUnload("nature");
+      if (ref.current && ref.current.playing()) {
+        ref.current.pause();
+      }
     }
-  }, [isNaturePlaying, selectedTracks.nature]);
+  }, [isNaturePlaying, audioContextUnlocked, selectedTracks.nature]);
 
   useEffect(() => {
     const ref = whiteNoiseHowlRef;
+    const track = selectedTracks.whiteNoise;
     if (isWhiteNoisePlaying) {
       if (!ref.current) {
-        ref.current = createHowl("whiteNoise", selectedTracks.whiteNoise);
-        ref.current?.play();
-      } else {
+        ref.current = createHowl("whiteNoise", track);
+        if (ref.current && audioContextUnlocked) {
+          updateVolume("whiteNoise", ref.current);
+          ref.current.play();
+        }
+      } else if (!ref.current.playing()) {
+        updateVolume("whiteNoise", ref.current);
         ref.current.play();
       }
     } else {
-      stopAndUnload("whiteNoise");
+      if (ref.current && ref.current.playing()) {
+        ref.current.pause();
+      }
     }
-  }, [isWhiteNoisePlaying, selectedTracks.whiteNoise]);
+  }, [isWhiteNoisePlaying, audioContextUnlocked, selectedTracks.whiteNoise]);
 
   useEffect(() => {
     const ref = melodyHowlRef;
+    const track = selectedTracks.melody;
     if (isMelodyPlaying) {
       if (!ref.current) {
-        ref.current = createHowl("melody", selectedTracks.melody);
-        ref.current?.play();
-      } else {
+        ref.current = createHowl("melody", track);
+        if (ref.current && audioContextUnlocked) {
+          updateVolume("melody", ref.current);
+          ref.current.play();
+        }
+      } else if (!ref.current.playing()) {
+        updateVolume("melody", ref.current);
         ref.current.play();
       }
     } else {
-      stopAndUnload("melody");
+      if (ref.current && ref.current.playing()) {
+        ref.current.pause();
+      }
     }
-  }, [isMelodyPlaying, selectedTracks.melody]);
+  }, [isMelodyPlaying, audioContextUnlocked, selectedTracks.melody]);
 
   useEffect(() => {
-    updateVolume("nature");
-    updateVolume("whiteNoise");
-    updateVolume("melody");
-  }, [natureVolume, whiteNoiseVolume, melodyVolume, masterVolume]);
+    const ref = natureHowlRef;
+    const wasPlaying = isNaturePlaying;
+    if (ref.current) {
+      ref.current.stop();
+      ref.current.unload();
+      ref.current = null;
+      if (wasPlaying) {
+        const newHowl = createHowl("nature", selectedTracks.nature);
+        if (newHowl && audioContextUnlocked) {
+          ref.current = newHowl;
+          updateVolume("nature", newHowl);
+          ref.current.play();
+        }
+      }
+    }
+  }, [selectedTracks.nature]);
 
-  function handleTrackChange(category: SoundCategory, trackId: string) {
-    setSelectedTracks((prev) => ({ ...prev, [category]: trackId }));
-    setAudioStatus((prev) => ({
-      ...prev,
-      [category]: { loaded: false, error: null },
+  useEffect(() => {
+    const ref = whiteNoiseHowlRef;
+    const wasPlaying = isWhiteNoisePlaying;
+    if (ref.current) {
+      ref.current.stop();
+      ref.current.unload();
+      ref.current = null;
+      if (wasPlaying) {
+        const newHowl = createHowl("whiteNoise", selectedTracks.whiteNoise);
+        if (newHowl && audioContextUnlocked) {
+          ref.current = newHowl;
+          updateVolume("whiteNoise", newHowl);
+          ref.current.play();
+        }
+      }
+    }
+  }, [selectedTracks.whiteNoise]);
+
+  useEffect(() => {
+    const ref = melodyHowlRef;
+    const wasPlaying = isMelodyPlaying;
+    if (ref.current) {
+      ref.current.stop();
+      ref.current.unload();
+      ref.current = null;
+      if (wasPlaying) {
+        const newHowl = createHowl("melody", selectedTracks.melody);
+        if (newHowl && audioContextUnlocked) {
+          ref.current = newHowl;
+          updateVolume("melody", newHowl);
+          ref.current.play();
+        }
+      }
+    }
+  }, [selectedTracks.melody]);
+
+  useEffect(() => {
+    if (natureHowlRef.current) {
+      updateVolume("nature");
+    }
+  }, [natureVolume, masterVolume]);
+
+  useEffect(() => {
+    if (whiteNoiseHowlRef.current) {
+      updateVolume("whiteNoise");
+    }
+  }, [whiteNoiseVolume, masterVolume]);
+
+  useEffect(() => {
+    if (melodyHowlRef.current) {
+      updateVolume("melody");
+    }
+  }, [melodyVolume, masterVolume]);
+
+  useEffect(() => {
+    if (natureHowlRef.current) {
+      updateVolume("nature");
+    }
+    if (whiteNoiseHowlRef.current) {
+      updateVolume("whiteNoise");
+    }
+    if (melodyHowlRef.current) {
+      updateVolume("melody");
+    }
+  }, [masterVolume]);
+
+  function handleTrackChange(cat: SoundCategory, trackId: string) {
+    if (selectedTracks[cat] === trackId) return;
+    setSelectedTracks((p) => ({ ...p, [cat]: trackId }));
+    setAudioStatus((pr) => ({
+      ...pr,
+      [cat]: { loaded: false, error: null },
     }));
   }
+
+  useEffect(() => {
+    return () => {
+      stopAndUnload("nature");
+      stopAndUnload("whiteNoise");
+      stopAndUnload("melody");
+    };
+  }, []);
 
   return {
     natureVolume,
@@ -244,17 +347,14 @@ export default function useFocusSoundMixer() {
     setMelodyVolume,
     masterVolume,
     setMasterVolume,
-
     isNaturePlaying,
     setIsNaturePlaying,
     isWhiteNoisePlaying,
     setIsWhiteNoisePlaying,
     isMelodyPlaying,
     setIsMelodyPlaying,
-
     selectedTracks,
     handleTrackChange,
-
     audioContextUnlocked,
     audioStatus,
   };

@@ -1,5 +1,4 @@
 "use client";
-
 import { useState, useRef, useEffect } from "react";
 import {
   Card,
@@ -12,13 +11,11 @@ import {
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import {
   Volume2,
   VolumeX,
   Play,
-  RotateCcw,
   Leaf,
   Wind,
   Music,
@@ -39,62 +36,26 @@ if (typeof window !== "undefined") {
     const howler = require("howler");
     Howler = howler.Howler;
     Howl = howler.Howl;
-  } catch (error) {
-    console.error("Failed to load Howler:", error);
+  } catch (e) {
+    console.error("Error loading Howler:", e);
   }
 }
 
 const SOUND_CATEGORIES = {
   nature: [
-    {
-      id: "rain",
-      name: "Rain",
-      icon: <Droplets className="h-3.5 w-3.5 md:h-4 md:w-4 mr-0.5 md:mr-1" />,
-    },
-    {
-      id: "forest",
-      name: "Forest",
-      icon: <Leaf className="h-3.5 w-3.5 md:h-4 md:w-4 mr-0.5 md:mr-1" />,
-    },
-    {
-      id: "ocean",
-      name: "Ocean",
-      icon: <Waves className="h-3.5 w-3.5 md:h-4 md:w-4 mr-0.5 md:mr-1" />,
-    },
+    { id: "rain", name: "Rain", icon: <Droplets className="h-3.5 w-3.5 mr-1" /> },
+    { id: "forest", name: "Forest", icon: <Leaf className="h-3.5 w-3.5 mr-1" /> },
+    { id: "ocean", name: "Ocean", icon: <Waves className="h-3.5 w-3.5 mr-1" /> },
   ],
   whiteNoise: [
-    {
-      id: "white",
-      name: "White",
-      icon: <Cloud className="h-3.5 w-3.5 md:h-4 md:w-4 mr-0.5 md:mr-1" />,
-    },
-    {
-      id: "brown",
-      name: "Brown",
-      icon: <Wind className="h-3.5 w-3.5 md:h-4 md:w-4 mr-0.5 md:mr-1" />,
-    },
-    {
-      id: "pink",
-      name: "Pink",
-      icon: <Radio className="h-3.5 w-3.5 md:h-4 md:w-4 mr-0.5 md:mr-1" />,
-    },
+    { id: "white", name: "White", icon: <Cloud className="h-3.5 w-3.5 mr-1" /> },
+    { id: "brown", name: "Brown", icon: <Wind className="h-3.5 w-3.5 mr-1" /> },
+    { id: "pink", name: "Pink", icon: <Radio className="h-3.5 w-3.5 mr-1" /> },
   ],
   melody: [
-    {
-      id: "ambient",
-      name: "Ambient",
-      icon: <Music className="h-3.5 w-3.5 md:h-4 md:w-4 mr-0.5 md:mr-1" />,
-    },
-    {
-      id: "piano",
-      name: "Piano",
-      icon: <Piano className="h-3.5 w-3.5 md:h-4 md:w-4 mr-0.5 md:mr-1" />,
-    },
-    {
-      id: "lofi",
-      name: "Lo-Fi",
-      icon: <Headphones className="h-3.5 w-3.5 md:h-4 md:w-4 mr-0.5 md:mr-1" />,
-    },
+    { id: "ambient", name: "Ambient", icon: <Music className="h-3.5 w-3.5 mr-1" /> },
+    { id: "piano", name: "Piano", icon: <Piano className="h-3.5 w-3.5 mr-1" /> },
+    { id: "lofi", name: "Lo-Fi", icon: <Headphones className="h-3.5 w-3.5 mr-1" /> },
   ],
 };
 
@@ -173,13 +134,11 @@ const SOUND_URLS: {
 };
 
 const ClientOnly = ({ children }: { children: React.ReactNode }) => {
-  const [hasMounted, setHasMounted] = useState(false);
-
+  const [m, setM] = useState(false);
   useEffect(() => {
-    setHasMounted(true);
+    setM(true);
   }, []);
-
-  if (!hasMounted) return null;
+  if (!m) return null;
   return <>{children}</>;
 };
 
@@ -193,27 +152,20 @@ export default function FocusSoundMixer() {
     whiteNoise: false,
     melody: false,
   });
-  const [activeCategory, setActiveCategory] = useState<
-    "nature" | "whiteNoise" | "melody"
-  >("nature");
   const [audioContextUnlocked, setAudioContextUnlocked] = useState(false);
-
   const [selectedTracks, setSelectedTracks] = useState({
     nature: SOUND_CATEGORIES.nature[0].id,
     whiteNoise: SOUND_CATEGORIES.whiteNoise[0].id,
     melody: SOUND_CATEGORIES.melody[0].id,
   });
-
   const [audioStatus, setAudioStatus] = useState({
     nature: { loaded: false, error: null as string | null },
     whiteNoise: { loaded: false, error: null as string | null },
     melody: { loaded: false, error: null as string | null },
   });
-
   const natureHowlRef = useRef<any | null>(null);
   const whiteNoiseHowlRef = useRef<any | null>(null);
   const melodyHowlRef = useRef<any | null>(null);
-
   const [isMounted, setIsMounted] = useState(false);
   useEffect(() => {
     setIsMounted(true);
@@ -221,435 +173,402 @@ export default function FocusSoundMixer() {
       setIsMounted(false);
     };
   }, []);
-
   useEffect(() => {
     if (!isMounted || typeof window === "undefined") return;
-
     if (!Howler) {
       try {
-        const howler = require("howler");
-        Howler = howler.Howler;
-        Howl = howler.Howl;
-      } catch (error) {
-        console.error("Failed to load Howler:", error);
+        const h = require("howler");
+        Howler = h.Howler;
+        Howl = h.Howl;
+      } catch (e) {
+        console.error("Error loading Howler:", e);
         return;
       }
     }
-
-    const unlockAudioContext = () => {
+    const f = () => {
       try {
         if (Howler && Howler.ctx && Howler.ctx.state !== "running") {
-          Howler.ctx
-            .resume()
-            .then(() => {
-              setAudioContextUnlocked(true);
-            })
-            .catch(() => {});
-        } else {
-          setAudioContextUnlocked(true);
-        }
-      } catch (e) {}
-    };
-
-    unlockAudioContext();
-
-    const userInteractionEvents = ["click", "touchstart", "keydown"];
-    const handleUserInteraction = () => {
-      try {
-        if (Howler && Howler.ctx && Howler.ctx.state !== "running") {
-          Howler.ctx
-            .resume()
-            .then(() => {
-              setAudioContextUnlocked(true);
-              userInteractionEvents.forEach((event) => {
-                document.removeEventListener(event, handleUserInteraction);
-              });
-            })
-            .catch(() => {});
-        } else {
-          setAudioContextUnlocked(true);
-          userInteractionEvents.forEach((event) => {
-            document.removeEventListener(event, handleUserInteraction);
+          Howler.ctx.resume().then(() => {
+            setAudioContextUnlocked(true);
           });
+        } else {
+          setAudioContextUnlocked(true);
         }
       } catch (e) {}
     };
-
-    userInteractionEvents.forEach((event) => {
-      document.addEventListener(event, handleUserInteraction, { once: true });
+    f();
+    const evts = ["click", "touchstart", "keydown"];
+    const u = () => {
+      try {
+        if (Howler && Howler.ctx && Howler.ctx.state !== "running") {
+          Howler.ctx.resume().then(() => {
+            setAudioContextUnlocked(true);
+            evts.forEach((e) => document.removeEventListener(e, u));
+          });
+        } else {
+          setAudioContextUnlocked(true);
+          evts.forEach((e) => document.removeEventListener(e, u));
+        }
+      } catch (e) {}
+    };
+    evts.forEach((e) => {
+      document.addEventListener(e, u, { once: true });
     });
-
     return () => {
-      userInteractionEvents.forEach((event) => {
-        document.removeEventListener(event, handleUserInteraction);
+      evts.forEach((e) => {
+        document.removeEventListener(e, u);
       });
     };
   }, [isMounted]);
-
   const stopAllSounds = () => {
-    const safelyStopSound = (ref: React.MutableRefObject<any | null>) => {
+    const s = (r: React.MutableRefObject<any | null>) => {
       try {
-        if (ref.current) {
-          ref.current.stop();
-          ref.current.unload();
-          ref.current = null;
+        if (r.current) {
+          r.current.stop();
+          r.current.unload();
+          r.current = null;
         }
       } catch (e) {
         console.error("Error stopping sound:", e);
       }
     };
-
-    safelyStopSound(natureHowlRef);
-    safelyStopSound(whiteNoiseHowlRef);
-    safelyStopSound(melodyHowlRef);
+    s(natureHowlRef);
+    s(whiteNoiseHowlRef);
+    s(melodyHowlRef);
   };
-
   const createHowl = (
-    sources: string[],
-    category: "nature" | "whiteNoise" | "melody",
-    onSuccess: (howl: any) => void
+    arrFuentes: string[],
+    cat: "nature" | "whiteNoise" | "melody",
+    fn: (howl: any) => void
   ) => {
     if (!isMounted || typeof window === "undefined" || !Howl) return null;
-
-    setAudioStatus((prev) => ({
-      ...prev,
-      [category]: { loaded: false, error: null },
+    
+    let volCat = 0;
+    switch(cat) {
+      case "nature":
+        volCat = natureVolume;
+        break;
+      case "whiteNoise":
+        volCat = whiteNoiseVolume;
+        break;
+      case "melody":
+        volCat = melodyVolume;
+        break;
+    }
+    
+    let volInicial = (masterVolume / 100) * (volCat / 100);
+    volInicial = Math.max(0, Math.min(1, volInicial));
+    
+    setAudioStatus((p) => ({
+      ...p,
+      [cat]: { loaded: false, error: null },
     }));
-
-    const howl = new Howl({
-      src: sources,
+    
+    const h = new Howl({
+      src: arrFuentes,
       html5: true,
       loop: true,
       preload: true,
-      volume: 0,
+      volume: volInicial,
       format: ["mp3", "wav", "ogg"],
       onload: () => {
-        setAudioStatus((prev) => ({
-          ...prev,
-          [category]: { loaded: true, error: null },
+        setAudioStatus((p) => ({
+          ...p,
+          [cat]: { loaded: true, error: null },
         }));
-        onSuccess(howl);
+        fn(h);
       },
       onloaderror: () => {
-        setAudioStatus((prev) => ({
-          ...prev,
-          [category]: { loaded: false, error: "Failed to load audio" },
+        setAudioStatus((p) => ({
+          ...p,
+          [cat]: { loaded: false, error: "Failed to load audio" },
         }));
       },
       onplayerror: () => {
         try {
           if (Howler && Howler.ctx && Howler.ctx.state !== "running") {
-            Howler.ctx
-              .resume()
-              .then(() => {
-                setAudioContextUnlocked(true);
-                setTimeout(() => {
-                  howl.play();
-                }, 100);
-              })
-              .catch(() => {
-                setAudioStatus((prev) => ({
-                  ...prev,
-                  [category]: {
-                    ...prev[category],
-                    error:
-                      "Please interact with the page first (tap or click anywhere) to enable audio playback",
-                  },
-                }));
-              });
+            Howler.ctx.resume().then(() => {
+              setAudioContextUnlocked(true);
+              updateSoundVolume(cat, h);
+              setTimeout(() => {
+                h.play();
+              }, 100);
+            });
           } else {
-            setAudioStatus((prev) => ({
-              ...prev,
-              [category]: { ...prev[category], error: "Failed to play audio" },
+            setAudioStatus((p) => ({
+              ...p,
+              [cat]: { ...p[cat], error: "Failed to play audio" },
             }));
           }
         } catch (e) {
-          setAudioStatus((prev) => ({
-            ...prev,
-            [category]: { ...prev[category], error: "Failed to play audio" },
+          setAudioStatus((p) => ({
+            ...p,
+            [cat]: { ...p[cat], error: "Failed to play audio" },
           }));
         }
       },
     });
-
-    return howl;
+    return h;
   };
-
-  const updateSoundVolume = (
-    category: "nature" | "whiteNoise" | "melody",
-    howl?: any
-  ) => {
+  const updateSoundVolume = (cat: "nature" | "whiteNoise" | "melody", h?: any) => {
     if (!isMounted) return;
-
-    let volume = 0;
-    let categoryVolume = 0;
-
-    if (category === "nature") {
-      categoryVolume = natureVolume;
-    } else if (category === "whiteNoise") {
-      categoryVolume = whiteNoiseVolume;
-    } else if (category === "melody") {
-      categoryVolume = melodyVolume;
+    
+    let volCat = 0;
+    switch(cat) {
+      case "nature":
+        volCat = natureVolume;
+        break;
+      case "whiteNoise":
+        volCat = whiteNoiseVolume;
+        break;
+      case "melody":
+        volCat = melodyVolume;
+        break;
     }
-
-    volume = (masterVolume / 100) * (categoryVolume / 100);
-
-    volume = Math.max(0, Math.min(1, volume));
-
-    if (howl && typeof howl.volume === "function") {
-      howl.volume(volume);
+    
+    let vol = (masterVolume / 100) * (volCat / 100);
+    vol = Math.max(0, Math.min(1, vol));
+    
+    if (h && typeof h.volume === "function") {
+      h.volume(vol);
       return;
     }
-
-    if (category === "nature" && natureHowlRef.current) {
-      natureHowlRef.current.volume(volume);
-    } else if (category === "whiteNoise" && whiteNoiseHowlRef.current) {
-      whiteNoiseHowlRef.current.volume(volume);
-    } else if (category === "melody" && melodyHowlRef.current) {
-      melodyHowlRef.current.volume(volume);
+    
+    const ref = cat === "nature" 
+      ? natureHowlRef 
+      : cat === "whiteNoise" 
+        ? whiteNoiseHowlRef 
+        : melodyHowlRef;
+          
+    if (ref.current && typeof ref.current.volume === "function") {
+      ref.current.volume(vol);
     }
   };
-
   useEffect(() => {
     if (!isMounted || typeof window === "undefined" || !Howl) return;
-
-    const loadInitialAudio = (
-      category: "nature" | "whiteNoise" | "melody",
+    
+    const f = (
+      cat: "nature" | "whiteNoise" | "melody",
       trackId: string,
       ref: React.MutableRefObject<any | null>
     ) => {
-      if (ref.current) return;
-
-      const soundData =
-        SOUND_URLS[category][
-          trackId as keyof (typeof SOUND_URLS)[typeof category]
-        ];
-      if (!soundData) return;
-
-      const sources: string[] = [];
-      if (soundData.local) sources.push(soundData.local);
-      if (soundData.fallback) sources.push(soundData.fallback);
-      if (soundData.alternate) sources.push(soundData.alternate);
-
-      const howlInstance = createHowl(sources, category, (howl) => {
-        updateSoundVolume(category, howl);
+      if (ref.current) {
+        const estaba = playingStates[cat];
+        ref.current.stop();
+        ref.current.unload();
+        ref.current = null;
+        const d =
+          SOUND_URLS[cat][trackId as keyof (typeof SOUND_URLS)[typeof cat]];
+        if (!d) return;
+        const arr: string[] = [];
+        if (d.local) arr.push(d.local);
+        if (d.fallback) arr.push(d.fallback);
+        if (d.alternate) arr.push(d.alternate);
+        const newH = createHowl(arr, cat, (x) => {
+          updateSoundVolume(cat, x);
+          if (estaba && audioContextUnlocked) {
+            x.play();
+          }
+        });
+        ref.current = newH;
+        return;
+      }
+      
+      const d =
+        SOUND_URLS[cat][trackId as keyof (typeof SOUND_URLS)[typeof cat]];
+      if (!d) return;
+      const arr: string[] = [];
+      if (d.local) arr.push(d.local);
+      if (d.fallback) arr.push(d.fallback);
+      if (d.alternate) arr.push(d.alternate);
+      const newH = createHowl(arr, cat, (x) => {
+        updateSoundVolume(cat, x);
       });
-
-      ref.current = howlInstance;
+      ref.current = newH;
     };
-
-    loadInitialAudio("nature", selectedTracks.nature, natureHowlRef);
-    loadInitialAudio(
-      "whiteNoise",
-      selectedTracks.whiteNoise,
-      whiteNoiseHowlRef
-    );
-    loadInitialAudio("melody", selectedTracks.melody, melodyHowlRef);
-
+    
+    if (selectedTracks.nature) {
+      f("nature", selectedTracks.nature, natureHowlRef);
+    }
+    if (selectedTracks.whiteNoise) {
+      f("whiteNoise", selectedTracks.whiteNoise, whiteNoiseHowlRef);
+    }
+    if (selectedTracks.melody) {
+      f("melody", selectedTracks.melody, melodyHowlRef);
+    }
+    
     return () => {
       stopAllSounds();
     };
-  }, [isMounted, selectedTracks]);
-
+  }, [isMounted]);
+  const handleTrackChange = (
+    cat: keyof typeof selectedTracks,
+    trackId: string
+  ) => {
+    if (selectedTracks[cat] === trackId) return;
+    
+    const nm = SOUND_CATEGORIES[cat].find((t) => t.id === trackId)?.name;
+    if (nm) {
+      toast(`Switching to ${nm}`, { duration: 1500 });
+    }
+    
+    const estaba = playingStates[cat];
+    
+    setSelectedTracks((p) => ({ ...p, [cat]: trackId }));
+    
+    const ref =
+      cat === "nature"
+        ? natureHowlRef
+        : cat === "whiteNoise"
+        ? whiteNoiseHowlRef
+        : melodyHowlRef;
+    
+    if (ref.current) {
+      ref.current.stop();
+      ref.current.unload();
+      ref.current = null;
+    }
+    
+    const d =
+      SOUND_URLS[cat][trackId as keyof (typeof SOUND_URLS)[typeof cat]];
+    if (d) {
+      const arr: string[] = [];
+      if (d.local) arr.push(d.local);
+      if (d.fallback) arr.push(d.fallback);
+      if (d.alternate) arr.push(d.alternate);
+      
+      const n = createHowl(arr, cat, (x) => {
+        updateSoundVolume(cat, x);
+        
+        if (estaba && audioContextUnlocked) {
+          x.play();
+        }
+      });
+      
+      ref.current = n;
+    }
+    
+    setAudioStatus((p) => ({
+      ...p,
+      [cat]: { loaded: false, error: null },
+    }));
+  };
   useEffect(() => {
     if (!isMounted || !audioContextUnlocked) return;
-
+    
     if (natureHowlRef.current) {
       if (playingStates.nature) {
         updateSoundVolume("nature");
-        natureHowlRef.current.play();
+        if (!natureHowlRef.current.playing()) {
+          natureHowlRef.current.play();
+        }
       } else {
         natureHowlRef.current.pause();
       }
     }
-
+    
     if (whiteNoiseHowlRef.current) {
       if (playingStates.whiteNoise) {
         updateSoundVolume("whiteNoise");
-        whiteNoiseHowlRef.current.play();
+        if (!whiteNoiseHowlRef.current.playing()) {
+          whiteNoiseHowlRef.current.play();
+        }
       } else {
         whiteNoiseHowlRef.current.pause();
       }
     }
-
+    
     if (melodyHowlRef.current) {
       if (playingStates.melody) {
         updateSoundVolume("melody");
-        melodyHowlRef.current.play();
+        if (!melodyHowlRef.current.playing()) {
+          melodyHowlRef.current.play();
+        }
       } else {
         melodyHowlRef.current.pause();
       }
     }
   }, [playingStates, isMounted, audioContextUnlocked]);
-
   useEffect(() => {
     if (isMounted) {
+      if (natureHowlRef.current) updateSoundVolume("nature");
+      if (whiteNoiseHowlRef.current) updateSoundVolume("whiteNoise");
+      if (melodyHowlRef.current) updateSoundVolume("melody");
+    }
+  }, [masterVolume, isMounted]);
+  useEffect(() => {
+    if (isMounted && natureHowlRef.current) {
       updateSoundVolume("nature");
+    }
+  }, [natureVolume, isMounted]);
+  useEffect(() => {
+    if (isMounted && whiteNoiseHowlRef.current) {
       updateSoundVolume("whiteNoise");
+    }
+  }, [whiteNoiseVolume, isMounted]);
+  useEffect(() => {
+    if (isMounted && melodyHowlRef.current) {
       updateSoundVolume("melody");
     }
-  }, [natureVolume, whiteNoiseVolume, melodyVolume, masterVolume]);
-
+  }, [melodyVolume, isMounted]);
   const toggleCategoryPlayback = (
-    category: "nature" | "whiteNoise" | "melody"
+    cat: "nature" | "whiteNoise" | "melody"
   ) => {
-    setPlayingStates((prev) => {
-      const newState = !prev[category];
-
-      const ref =
-        category === "nature"
-          ? natureHowlRef
-          : category === "whiteNoise"
-          ? whiteNoiseHowlRef
-          : melodyHowlRef;
-
-      if (!ref.current && newState) {
-        const trackId = selectedTracks[category];
-        const soundData =
-          SOUND_URLS[category][
-            trackId as keyof (typeof SOUND_URLS)[typeof category]
-          ];
-
-        if (soundData) {
-          const sources: string[] = [];
-          if (soundData.local) sources.push(soundData.local);
-          if (soundData.fallback) sources.push(soundData.fallback);
-          if (soundData.alternate) sources.push(soundData.alternate);
-
-          ref.current = createHowl(sources, category, (howl) => {
-            updateSoundVolume(category, howl);
+    const s = !playingStates[cat];
+    
+    setPlayingStates((p) => ({
+      ...p,
+      [cat]: s,
+    }));
+    
+    const ref =
+      cat === "nature"
+        ? natureHowlRef
+        : cat === "whiteNoise"
+        ? whiteNoiseHowlRef
+        : melodyHowlRef;
+    
+    if (s) {
+      if (!ref.current) {
+        const tr = selectedTracks[cat];
+        const d = SOUND_URLS[cat][tr as keyof (typeof SOUND_URLS)[typeof cat]];
+        if (d) {
+          const arr: string[] = [];
+          if (d.local) arr.push(d.local);
+          if (d.fallback) arr.push(d.fallback);
+          if (d.alternate) arr.push(d.alternate);
+          
+          ref.current = createHowl(arr, cat, (x) => {
+            updateSoundVolume(cat, x);
+            
             if (audioContextUnlocked) {
-              howl.play();
+              x.play();
             }
           });
         }
-      }
-
-      return { ...prev, [category]: newState };
-    });
-  };
-
-  const handleTabChange = (value: string) => {
-    if (!isMounted) return;
-    const newCategory = value as "nature" | "whiteNoise" | "melody";
-    if (newCategory !== activeCategory) {
-      toast(`Showing ${newCategory} controls`, { duration: 1500 });
-      setActiveCategory(newCategory);
-    }
-  };
-
-  const handleTrackChange = (
-    category: keyof typeof selectedTracks,
-    trackId: string
-  ) => {
-    if (selectedTracks[category] === trackId) {
-      if (category !== activeCategory) {
-        setActiveCategory(category);
-      }
-      return;
-    }
-
-    const trackName = SOUND_CATEGORIES[category].find(
-      (t) => t.id === trackId
-    )?.name;
-    if (trackName) {
-      toast(`Switching to ${trackName} sound`, { duration: 1500 });
-    }
-
-    const wasPlaying = playingStates[category];
-
-    setSelectedTracks((prev) => ({ ...prev, [category]: trackId }));
-
-    const ref =
-      category === "nature"
-        ? natureHowlRef
-        : category === "whiteNoise"
-        ? whiteNoiseHowlRef
-        : melodyHowlRef;
-
-    if (ref.current) {
-      if (wasPlaying) {
-        setPlayingStates((prev) => ({
-          ...prev,
-          [category]: false,
-        }));
-
-        ref.current.stop();
-        ref.current.unload();
-        ref.current = null;
       } else {
-        ref.current.stop();
-        ref.current.unload();
-        ref.current = null;
-      }
-
-      const soundData =
-        SOUND_URLS[category][
-          trackId as keyof (typeof SOUND_URLS)[typeof category]
-        ];
-
-      if (soundData) {
-        const sources: string[] = [];
-        if (soundData.local) sources.push(soundData.local);
-        if (soundData.fallback) sources.push(soundData.fallback);
-        if (soundData.alternate) sources.push(soundData.alternate);
-
-        const newHowl = createHowl(sources, category, (howl) => {
-          updateSoundVolume(category, howl);
-
-          if (wasPlaying && audioContextUnlocked) {
-            howl.play();
-
-            setPlayingStates((prev) => ({
-              ...prev,
-              [category]: true,
-            }));
-          }
-        });
-
-        ref.current = newHowl;
+        updateSoundVolume(cat, ref.current);
+        
+        if (audioContextUnlocked) {
+          ref.current.play();
+        }
       }
     } else {
-      const soundData =
-        SOUND_URLS[category][
-          trackId as keyof (typeof SOUND_URLS)[typeof category]
-        ];
-
-      if (soundData) {
-        const sources: string[] = [];
-        if (soundData.local) sources.push(soundData.local);
-        if (soundData.fallback) sources.push(soundData.fallback);
-        if (soundData.alternate) sources.push(soundData.alternate);
-
-        const newHowl = createHowl(sources, category, (howl) => {
-          updateSoundVolume(category, howl);
-        });
-
-        ref.current = newHowl;
+      if (ref.current) {
+        ref.current.pause();
       }
     }
-
-    setAudioStatus((prev) => ({
-      ...prev,
-      [category]: { loaded: false, error: null },
-    }));
-
-    setActiveCategory(category);
   };
-
   return (
     <Card className="shadow-lg w-full max-w-[95vw] sm:max-w-2xl mx-auto">
       <CardHeader>
         <CardTitle className="flex items-center justify-between text-foreground">
-          <span>Sound Mixer</span>
+          <span>Mixer</span>
           <div className="flex gap-2"></div>
         </CardTitle>
-        <CardDescription>
-          Adjust the sliders to mix your perfect focus sound environment
-        </CardDescription>
+        <CardDescription>Adjust the controls for your mix</CardDescription>
       </CardHeader>
-
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-8">
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -658,268 +577,231 @@ export default function FocusSoundMixer() {
               ) : (
                 <VolumeX className="h-5 w-5 text-muted-foreground" />
               )}
-              <Label htmlFor="master-volume">Master Volume</Label>
+              <Label>Master Volume</Label>
             </div>
             <span className="text-sm text-muted-foreground w-8 text-right">
               {masterVolume}%
             </span>
           </div>
           <Slider
-            id="master-volume"
             min={0}
             max={100}
             step={1}
             value={[masterVolume]}
             onValueChange={(v) => setMasterVolume(v[0])}
             className="cursor-pointer"
-            aria-label="Master volume"
+            aria-label="master volume"
           />
         </div>
-
-        <Tabs
-          defaultValue="nature"
-          value={activeCategory}
-          onValueChange={handleTabChange}
-          className="w-full"
-        >
-          <TabsList className="grid grid-cols-3 mb-4 gap-1">
-            <TabsTrigger
-              value="nature"
-              className="flex items-center justify-center gap-1 md:gap-2 text-xs md:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-1 py-1.5"
-            >
-              <Leaf className="h-3.5 w-3.5 md:h-4 md:w-4 mr-0.5 md:mr-1" />
-              <span>Nature</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="whiteNoise"
-              className="flex items-center justify-center gap-1 md:gap-2 text-xs md:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-1 py-1.5"
-            >
-              <Wind className="h-3.5 w-3.5 md:h-4 md:w-4 mr-0.5 md:mr-1" />
-              <span>White Noise</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="melody"
-              className="flex items-center justify-center gap-1 md:gap-2 text-xs md:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-1 py-1.5"
-            >
-              <Music className="h-3.5 w-3.5 md:h-4 md:w-4 mr-0.5 md:mr-1" />
-              <span>Melody</span>
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="nature" className="space-y-4">
-            <div className="grid grid-cols-3 gap-1 md:gap-2">
-              {SOUND_CATEGORIES.nature.map((track) => (
+        <div className="space-y-4 border-t pt-4">
+          <h3 className="text-lg font-medium text-center">
+            <Leaf className="inline h-5 w-5 mr-1.5" />
+            Nature
+          </h3>
+          <div className="grid grid-cols-3 gap-1 md:gap-2">
+            {SOUND_CATEGORIES.nature.map((track) => (
+              <Button
+                key={track.id}
+                variant={
+                  selectedTracks.nature === track.id ? "default" : "outline"
+                }
+                onClick={() => handleTrackChange("nature", track.id)}
+                className={`w-full flex items-center justify-center text-xs md:text-sm py-1.5 md:py-2 px-1 md:px-3 h-auto ${
+                  selectedTracks.nature === track.id
+                    ? "bg-primary text-primary-foreground"
+                    : ""
+                }`}
+              >
+                <span className="flex items-center">
+                  {track.icon}
+                  <span>{track.name}</span>
+                </span>
+              </Button>
+            ))}
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between mb-2">
+              <Label>Volume</Label>
+              <div className="flex items-center gap-2">
                 <Button
-                  key={track.id}
-                  variant={
-                    selectedTracks.nature === track.id ? "default" : "outline"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => toggleCategoryPlayback("nature")}
+                  className="h-8 w-8 p-0"
+                  aria-label={
+                    playingStates.nature
+                      ? "Pause nature"
+                      : "Play nature"
                   }
-                  onClick={() => handleTrackChange("nature", track.id)}
-                  className={`w-full flex items-center justify-center text-xs md:text-sm py-1.5 md:py-2 px-1 md:px-3 h-auto ${
-                    selectedTracks.nature === track.id
-                      ? "bg-primary text-primary-foreground"
-                      : ""
-                  }`}
                 >
-                  <span className="flex items-center">
-                    {track.icon}
-                    <span>{track.name}</span>
-                  </span>
+                  {playingStates.nature ? (
+                    <Pause className="h-4 w-4" />
+                  ) : (
+                    <Play className="h-4 w-4" />
+                  )}
                 </Button>
-              ))}
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between mb-2">
-                <Label htmlFor="nature-volume">Volume</Label>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => toggleCategoryPlayback("nature")}
-                    className="h-8 w-8 p-0"
-                    aria-label={
-                      playingStates.nature
-                        ? "Pause nature sound"
-                        : "Play nature sound"
-                    }
-                  >
-                    {playingStates.nature ? (
-                      <Pause className="h-4 w-4" />
-                    ) : (
-                      <Play className="h-4 w-4" />
-                    )}
-                  </Button>
-                  <span className="text-sm text-muted-foreground w-8 text-right">
-                    {natureVolume}%
-                  </span>
-                </div>
+                <span className="text-sm text-muted-foreground w-8 text-right">
+                  {natureVolume}%
+                </span>
               </div>
-              <Slider
-                id="nature-volume"
-                min={0}
-                max={100}
-                step={1}
-                value={[natureVolume]}
-                onValueChange={(v) => setNatureVolume(v[0])}
-                className="cursor-pointer"
-                aria-label="Nature volume"
-              />
-              {audioStatus.nature.error && (
-                <p className="text-xs text-destructive mt-1">
-                  {audioStatus.nature.error}
-                </p>
-              )}
             </div>
-          </TabsContent>
-
-          <TabsContent value="whiteNoise" className="space-y-4">
-            <div className="grid grid-cols-3 gap-1 md:gap-2">
-              {SOUND_CATEGORIES.whiteNoise.map((track) => (
+            <Slider
+              min={0}
+              max={100}
+              step={1}
+              value={[natureVolume]}
+              onValueChange={(v) => setNatureVolume(v[0])}
+              className="cursor-pointer"
+              aria-label="Nature volume"
+            />
+            {audioStatus.nature.error && (
+              <p className="text-xs text-destructive mt-1">
+                {audioStatus.nature.error}
+              </p>
+            )}
+          </div>
+        </div>
+        <div className="space-y-4 border-t pt-4">
+          <h3 className="text-lg font-medium text-center">
+            <Wind className="inline h-5 w-5 mr-1.5" />
+            White Noise
+          </h3>
+          <div className="grid grid-cols-3 gap-1 md:gap-2">
+            {SOUND_CATEGORIES.whiteNoise.map((track) => (
+              <Button
+                key={track.id}
+                variant={
+                  selectedTracks.whiteNoise === track.id ? "default" : "outline"
+                }
+                onClick={() => handleTrackChange("whiteNoise", track.id)}
+                className={`w-full flex items-center justify-center text-xs md:text-sm py-1.5 md:py-2 px-1 md:px-3 h-auto ${
+                  selectedTracks.whiteNoise === track.id
+                    ? "bg-primary text-primary-foreground"
+                    : ""
+                }`}
+              >
+                <span className="flex items-center">
+                  {track.icon}
+                  <span>{track.name}</span>
+                </span>
+              </Button>
+            ))}
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between mb-2">
+              <Label>Volume</Label>
+              <div className="flex items-center gap-2">
                 <Button
-                  key={track.id}
-                  variant={
-                    selectedTracks.whiteNoise === track.id
-                      ? "default"
-                      : "outline"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => toggleCategoryPlayback("whiteNoise")}
+                  className="h-8 w-8 p-0"
+                  aria-label={
+                    playingStates.whiteNoise
+                      ? "Pause white noise"
+                      : "Play white noise"
                   }
-                  onClick={() => handleTrackChange("whiteNoise", track.id)}
-                  className={`w-full flex items-center justify-center text-xs md:text-sm py-1.5 md:py-2 px-1 md:px-3 h-auto ${
-                    selectedTracks.whiteNoise === track.id
-                      ? "bg-primary text-primary-foreground"
-                      : ""
-                  }`}
                 >
-                  <span className="flex items-center">
-                    {track.icon}
-                    <span>{track.name}</span>
-                  </span>
+                  {playingStates.whiteNoise ? (
+                    <Pause className="h-4 w-4" />
+                  ) : (
+                    <Play className="h-4 w-4" />
+                  )}
                 </Button>
-              ))}
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between mb-2">
-                <Label htmlFor="whitenoise-volume">Volume</Label>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => toggleCategoryPlayback("whiteNoise")}
-                    className="h-8 w-8 p-0"
-                    aria-label={
-                      playingStates.whiteNoise
-                        ? "Pause white noise sound"
-                        : "Play white noise sound"
-                    }
-                  >
-                    {playingStates.whiteNoise ? (
-                      <Pause className="h-4 w-4" />
-                    ) : (
-                      <Play className="h-4 w-4" />
-                    )}
-                  </Button>
-                  <span className="text-sm text-muted-foreground w-8 text-right">
-                    {whiteNoiseVolume}%
-                  </span>
-                </div>
+                <span className="text-sm text-muted-foreground w-8 text-right">
+                  {whiteNoiseVolume}%
+                </span>
               </div>
-              <Slider
-                id="whitenoise-volume"
-                min={0}
-                max={100}
-                step={1}
-                value={[whiteNoiseVolume]}
-                onValueChange={(v) => setWhiteNoiseVolume(v[0])}
-                className="cursor-pointer"
-                aria-label="White noise volume"
-              />
-              {audioStatus.whiteNoise.error && (
-                <p className="text-xs text-destructive mt-1">
-                  {audioStatus.whiteNoise.error}
-                </p>
-              )}
             </div>
-          </TabsContent>
-
-          <TabsContent value="melody" className="space-y-4">
-            <div className="grid grid-cols-3 gap-1 md:gap-2">
-              {SOUND_CATEGORIES.melody.map((track) => (
+            <Slider
+              min={0}
+              max={100}
+              step={1}
+              value={[whiteNoiseVolume]}
+              onValueChange={(v) => setWhiteNoiseVolume(v[0])}
+              className="cursor-pointer"
+              aria-label="White noise volume"
+            />
+            {audioStatus.whiteNoise.error && (
+              <p className="text-xs text-destructive mt-1">
+                {audioStatus.whiteNoise.error}
+              </p>
+            )}
+          </div>
+        </div>
+        <div className="space-y-4 border-t pt-4">
+          <h3 className="text-lg font-medium text-center">
+            <Music className="inline h-5 w-5 mr-1.5" />
+            Melody
+          </h3>
+          <div className="grid grid-cols-3 gap-1 md:gap-2">
+            {SOUND_CATEGORIES.melody.map((track) => (
+              <Button
+                key={track.id}
+                variant={selectedTracks.melody === track.id ? "default" : "outline"}
+                onClick={() => handleTrackChange("melody", track.id)}
+                className={`w-full flex items-center justify-center text-xs md:text-sm py-1.5 md:py-2 px-1 md:px-3 h-auto ${
+                  selectedTracks.melody === track.id
+                    ? "bg-primary text-primary-foreground"
+                    : ""
+                }`}
+              >
+                <span className="flex items-center">
+                  {track.icon}
+                  <span>{track.name}</span>
+                </span>
+              </Button>
+            ))}
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between mb-2">
+              <Label>Volume</Label>
+              <div className="flex items-center gap-2">
                 <Button
-                  key={track.id}
-                  variant={
-                    selectedTracks.melody === track.id ? "default" : "outline"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => toggleCategoryPlayback("melody")}
+                  className="h-8 w-8 p-0"
+                  aria-label={
+                    playingStates.melody
+                      ? "Pause melody"
+                      : "Play melody"
                   }
-                  onClick={() => handleTrackChange("melody", track.id)}
-                  className={`w-full flex items-center justify-center text-xs md:text-sm py-1.5 md:py-2 px-1 md:px-3 h-auto ${
-                    selectedTracks.melody === track.id
-                      ? "bg-primary text-primary-foreground"
-                      : ""
-                  }`}
                 >
-                  <span className="flex items-center">
-                    {track.icon}
-                    <span>{track.name}</span>
-                  </span>
+                  {playingStates.melody ? (
+                    <Pause className="h-4 w-4" />
+                  ) : (
+                    <Play className="h-4 w-4" />
+                  )}
                 </Button>
-              ))}
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between mb-2">
-                <Label htmlFor="melody-volume">Volume</Label>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => toggleCategoryPlayback("melody")}
-                    className="h-8 w-8 p-0"
-                    aria-label={
-                      playingStates.melody
-                        ? "Pause melody sound"
-                        : "Play melody sound"
-                    }
-                  >
-                    {playingStates.melody ? (
-                      <Pause className="h-4 w-4" />
-                    ) : (
-                      <Play className="h-4 w-4" />
-                    )}
-                  </Button>
-                  <span className="text-sm text-muted-foreground w-8 text-right">
-                    {melodyVolume}%
-                  </span>
-                </div>
+                <span className="text-sm text-muted-foreground w-8 text-right">
+                  {melodyVolume}%
+                </span>
               </div>
-              <Slider
-                id="melody-volume"
-                min={0}
-                max={100}
-                step={1}
-                value={[melodyVolume]}
-                onValueChange={(v) => setMelodyVolume(v[0])}
-                className="cursor-pointer"
-                aria-label="Melody volume"
-              />
-              {audioStatus.melody.error && (
-                <p className="text-xs text-destructive mt-1">
-                  {audioStatus.melody.error}
-                </p>
-              )}
             </div>
-          </TabsContent>
-        </Tabs>
+            <Slider
+              min={0}
+              max={100}
+              step={1}
+              value={[melodyVolume]}
+              onValueChange={(v) => setMelodyVolume(v[0])}
+              className="cursor-pointer"
+              aria-label="Melody volume"
+            />
+            {audioStatus.melody.error && (
+              <p className="text-xs text-destructive mt-1">
+                {audioStatus.melody.error}
+              </p>
+            )}
+          </div>
+        </div>
       </CardContent>
-
       <CardFooter className="flex flex-col items-center gap-2">
-        <p className="text-sm text-muted-foreground">
-          Adjust sliders to create your perfect sound mix
-        </p>
-
+        <p className="text-sm text-muted-foreground">Adjust for your mix</p>
         <ClientOnly>
           {!audioContextUnlocked && isMounted && (
             <div className="text-xs text-amber-500 text-center mt-2">
-              <p>Tap anywhere on the page to enable audio playback</p>
+              <p>Tap to enable audio</p>
             </div>
           )}
         </ClientOnly>
