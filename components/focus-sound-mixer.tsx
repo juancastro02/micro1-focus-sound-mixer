@@ -742,53 +742,6 @@ export default function FocusSoundMixer() {
         </p>
 
         <ClientOnly>
-          {isPlaying && (
-            <div className="text-xs text-primary text-center">
-              <p>Now Playing:</p>
-              {activeCategory === "nature" && (
-                <p className="flex items-center justify-center">
-                  {
-                    SOUND_CATEGORIES.nature.find(
-                      (t) => t.id === selectedTracks.nature
-                    )?.icon
-                  }
-                  {
-                    SOUND_CATEGORIES.nature.find(
-                      (t) => t.id === selectedTracks.nature
-                    )?.name
-                  }
-                </p>
-              )}
-              {activeCategory === "whiteNoise" && (
-                <p className="flex items-center justify-center">
-                  {
-                    SOUND_CATEGORIES.whiteNoise.find(
-                      (t) => t.id === selectedTracks.whiteNoise
-                    )?.icon
-                  }
-                  {
-                    SOUND_CATEGORIES.whiteNoise.find(
-                      (t) => t.id === selectedTracks.whiteNoise
-                    )?.name
-                  }
-                </p>
-              )}
-              {activeCategory === "melody" && (
-                <p className="flex items-center justify-center">
-                  {
-                    SOUND_CATEGORIES.melody.find(
-                      (t) => t.id === selectedTracks.melody
-                    )?.icon
-                  }
-                  {
-                    SOUND_CATEGORIES.melody.find(
-                      (t) => t.id === selectedTracks.melody
-                    )?.name
-                  }
-                </p>
-              )}
-            </div>
-          )}
 
           {!audioContextUnlocked && isMounted && (
             <div className="text-xs text-amber-500 text-center mt-2">
