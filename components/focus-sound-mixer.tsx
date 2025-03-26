@@ -28,6 +28,7 @@ import {
   Radio,
   Piano,
   Headphones,
+  Pause,
 } from "lucide-react";
 
 let Howler: any = null;
@@ -187,7 +188,11 @@ export default function FocusSoundMixer() {
   const [whiteNoiseVolume, setWhiteNoiseVolume] = useState(30);
   const [melodyVolume, setMelodyVolume] = useState(20);
   const [masterVolume, setMasterVolume] = useState(80);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [playingStates, setPlayingStates] = useState({
+    nature: false,
+    whiteNoise: false,
+    melody: false,
+  });
   const [activeCategory, setActiveCategory] = useState<
     "nature" | "whiteNoise" | "melody"
   >("nature");
@@ -282,27 +287,21 @@ export default function FocusSoundMixer() {
   }, [isMounted]);
 
   const stopAllSounds = () => {
-    try {
-      if (natureHowlRef.current) {
-        natureHowlRef.current.stop();
-        natureHowlRef.current.unload();
-        natureHowlRef.current = null;
+    const safelyStopSound = (ref: React.MutableRefObject<any | null>) => {
+      try {
+        if (ref.current) {
+          ref.current.stop();
+          ref.current.unload();
+          ref.current = null;
+        }
+      } catch (e) {
+        console.error("Error stopping sound:", e);
       }
-    } catch {}
-    try {
-      if (whiteNoiseHowlRef.current) {
-        whiteNoiseHowlRef.current.stop();
-        whiteNoiseHowlRef.current.unload();
-        whiteNoiseHowlRef.current = null;
-      }
-    } catch {}
-    try {
-      if (melodyHowlRef.current) {
-        melodyHowlRef.current.stop();
-        melodyHowlRef.current.unload();
-        melodyHowlRef.current = null;
-      }
-    } catch {}
+    };
+
+    safelyStopSound(natureHowlRef);
+    safelyStopSound(whiteNoiseHowlRef);
+    safelyStopSound(melodyHowlRef);
   };
 
   const createHowl = (
@@ -381,60 +380,51 @@ export default function FocusSoundMixer() {
     howl?: any
   ) => {
     if (!isMounted) return;
-    const masterVolumeMultiplier = masterVolume / 100;
-    let volume = 0;
-    let targetHowl = howl;
 
-    switch (category) {
-      case "nature":
-        volume = (natureVolume / 100) * masterVolumeMultiplier;
-        if (!targetHowl && natureHowlRef.current) {
-          targetHowl = natureHowlRef.current;
-        }
-        break;
-      case "whiteNoise":
-        volume = (whiteNoiseVolume / 100) * masterVolumeMultiplier;
-        if (!targetHowl && whiteNoiseHowlRef.current) {
-          targetHowl = whiteNoiseHowlRef.current;
-        }
-        break;
-      case "melody":
-        volume = (melodyVolume / 100) * masterVolumeMultiplier;
-        if (!targetHowl && melodyHowlRef.current) {
-          targetHowl = melodyHowlRef.current;
-        }
-        break;
+    let volume = 0;
+    let categoryVolume = 0;
+
+    if (category === "nature") {
+      categoryVolume = natureVolume;
+    } else if (category === "whiteNoise") {
+      categoryVolume = whiteNoiseVolume;
+    } else if (category === "melody") {
+      categoryVolume = melodyVolume;
     }
 
-    if (targetHowl) {
-      targetHowl.volume(volume);
+    volume = (masterVolume / 100) * (categoryVolume / 100);
+
+    volume = Math.max(0, Math.min(1, volume));
+
+    if (howl && typeof howl.volume === "function") {
+      howl.volume(volume);
+      return;
+    }
+
+    if (category === "nature" && natureHowlRef.current) {
+      natureHowlRef.current.volume(volume);
+    } else if (category === "whiteNoise" && whiteNoiseHowlRef.current) {
+      whiteNoiseHowlRef.current.volume(volume);
+    } else if (category === "melody" && melodyHowlRef.current) {
+      melodyHowlRef.current.volume(volume);
     }
   };
 
   useEffect(() => {
     if (!isMounted || typeof window === "undefined" || !Howl) return;
 
-    if (!isPlaying) {
-      stopAllSounds();
-      return;
-    }
-
-    stopAllSounds();
-
-    const loadAudio = (
+    const loadInitialAudio = (
       category: "nature" | "whiteNoise" | "melody",
       trackId: string,
       ref: React.MutableRefObject<any | null>
     ) => {
+      if (ref.current) return;
+
       const soundData =
-        SOUND_URLS[category][trackId as keyof (typeof SOUND_URLS)[typeof category]];
-      if (!soundData) {
-        setAudioStatus((prev) => ({
-          ...prev,
-          [category]: { loaded: false, error: `No URL found for ${trackId}` },
-        }));
-        return;
-      }
+        SOUND_URLS[category][
+          trackId as keyof (typeof SOUND_URLS)[typeof category]
+        ];
+      if (!soundData) return;
 
       const sources: string[] = [];
       if (soundData.local) sources.push(soundData.local);
@@ -443,41 +433,107 @@ export default function FocusSoundMixer() {
 
       const howlInstance = createHowl(sources, category, (howl) => {
         updateSoundVolume(category, howl);
-        if (category === activeCategory && isPlaying && audioContextUnlocked) {
-          howl.play();
-        }
       });
 
       ref.current = howlInstance;
     };
 
-    loadAudio("nature", selectedTracks.nature, natureHowlRef);
-    loadAudio("whiteNoise", selectedTracks.whiteNoise, whiteNoiseHowlRef);
-    loadAudio("melody", selectedTracks.melody, melodyHowlRef);
-  }, [
-    isMounted,
-    isPlaying,
-    selectedTracks,
-    activeCategory,
-    audioContextUnlocked,
-  ]);
+    loadInitialAudio("nature", selectedTracks.nature, natureHowlRef);
+    loadInitialAudio(
+      "whiteNoise",
+      selectedTracks.whiteNoise,
+      whiteNoiseHowlRef
+    );
+    loadInitialAudio("melody", selectedTracks.melody, melodyHowlRef);
+
+    return () => {
+      stopAllSounds();
+    };
+  }, [isMounted, selectedTracks]);
 
   useEffect(() => {
-    if (!isMounted) return;
-    updateSoundVolume("nature");
-    updateSoundVolume("whiteNoise");
-    updateSoundVolume("melody");
-  }, [isMounted, natureVolume, whiteNoiseVolume, melodyVolume, masterVolume]);
+    if (!isMounted || !audioContextUnlocked) return;
 
-  const togglePlayback = () => {
-    setIsPlaying((prev) => !prev);
+    if (natureHowlRef.current) {
+      if (playingStates.nature) {
+        updateSoundVolume("nature");
+        natureHowlRef.current.play();
+      } else {
+        natureHowlRef.current.pause();
+      }
+    }
+
+    if (whiteNoiseHowlRef.current) {
+      if (playingStates.whiteNoise) {
+        updateSoundVolume("whiteNoise");
+        whiteNoiseHowlRef.current.play();
+      } else {
+        whiteNoiseHowlRef.current.pause();
+      }
+    }
+
+    if (melodyHowlRef.current) {
+      if (playingStates.melody) {
+        updateSoundVolume("melody");
+        melodyHowlRef.current.play();
+      } else {
+        melodyHowlRef.current.pause();
+      }
+    }
+  }, [playingStates, isMounted, audioContextUnlocked]);
+
+  useEffect(() => {
+    if (isMounted) {
+      updateSoundVolume("nature");
+      updateSoundVolume("whiteNoise");
+      updateSoundVolume("melody");
+    }
+  }, [natureVolume, whiteNoiseVolume, melodyVolume, masterVolume]);
+
+  const toggleCategoryPlayback = (
+    category: "nature" | "whiteNoise" | "melody"
+  ) => {
+    setPlayingStates((prev) => {
+      const newState = !prev[category];
+
+      const ref =
+        category === "nature"
+          ? natureHowlRef
+          : category === "whiteNoise"
+          ? whiteNoiseHowlRef
+          : melodyHowlRef;
+
+      if (!ref.current && newState) {
+        const trackId = selectedTracks[category];
+        const soundData =
+          SOUND_URLS[category][
+            trackId as keyof (typeof SOUND_URLS)[typeof category]
+          ];
+
+        if (soundData) {
+          const sources: string[] = [];
+          if (soundData.local) sources.push(soundData.local);
+          if (soundData.fallback) sources.push(soundData.fallback);
+          if (soundData.alternate) sources.push(soundData.alternate);
+
+          ref.current = createHowl(sources, category, (howl) => {
+            updateSoundVolume(category, howl);
+            if (audioContextUnlocked) {
+              howl.play();
+            }
+          });
+        }
+      }
+
+      return { ...prev, [category]: newState };
+    });
   };
 
   const handleTabChange = (value: string) => {
     if (!isMounted) return;
     const newCategory = value as "nature" | "whiteNoise" | "melody";
     if (newCategory !== activeCategory) {
-      toast(`Changing to ${newCategory} sounds`, { duration: 1500 });
+      toast(`Showing ${newCategory} controls`, { duration: 1500 });
       setActiveCategory(newCategory);
     }
   };
@@ -488,22 +544,96 @@ export default function FocusSoundMixer() {
   ) => {
     if (selectedTracks[category] === trackId) {
       if (category !== activeCategory) {
-        toast(`Changing to ${category} sounds`, { duration: 1500 });
         setActiveCategory(category);
       }
       return;
     }
 
-    const trackName = SOUND_CATEGORIES[category].find((t) => t.id === trackId)
-      ?.name;
+    const trackName = SOUND_CATEGORIES[category].find(
+      (t) => t.id === trackId
+    )?.name;
     if (trackName) {
       toast(`Switching to ${trackName} sound`, { duration: 1500 });
     }
+
+    const wasPlaying = playingStates[category];
+
     setSelectedTracks((prev) => ({ ...prev, [category]: trackId }));
+
+    const ref =
+      category === "nature"
+        ? natureHowlRef
+        : category === "whiteNoise"
+        ? whiteNoiseHowlRef
+        : melodyHowlRef;
+
+    if (ref.current) {
+      if (wasPlaying) {
+        setPlayingStates((prev) => ({
+          ...prev,
+          [category]: false,
+        }));
+
+        ref.current.stop();
+        ref.current.unload();
+        ref.current = null;
+      } else {
+        ref.current.stop();
+        ref.current.unload();
+        ref.current = null;
+      }
+
+      const soundData =
+        SOUND_URLS[category][
+          trackId as keyof (typeof SOUND_URLS)[typeof category]
+        ];
+
+      if (soundData) {
+        const sources: string[] = [];
+        if (soundData.local) sources.push(soundData.local);
+        if (soundData.fallback) sources.push(soundData.fallback);
+        if (soundData.alternate) sources.push(soundData.alternate);
+
+        const newHowl = createHowl(sources, category, (howl) => {
+          updateSoundVolume(category, howl);
+
+          if (wasPlaying && audioContextUnlocked) {
+            howl.play();
+
+            setPlayingStates((prev) => ({
+              ...prev,
+              [category]: true,
+            }));
+          }
+        });
+
+        ref.current = newHowl;
+      }
+    } else {
+      const soundData =
+        SOUND_URLS[category][
+          trackId as keyof (typeof SOUND_URLS)[typeof category]
+        ];
+
+      if (soundData) {
+        const sources: string[] = [];
+        if (soundData.local) sources.push(soundData.local);
+        if (soundData.fallback) sources.push(soundData.fallback);
+        if (soundData.alternate) sources.push(soundData.alternate);
+
+        const newHowl = createHowl(sources, category, (howl) => {
+          updateSoundVolume(category, howl);
+        });
+
+        ref.current = newHowl;
+      }
+    }
+
     setAudioStatus((prev) => ({
       ...prev,
       [category]: { loaded: false, error: null },
     }));
+
     setActiveCategory(category);
   };
 
@@ -512,21 +642,7 @@ export default function FocusSoundMixer() {
       <CardHeader>
         <CardTitle className="flex items-center justify-between text-foreground">
           <span>Sound Mixer</span>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={togglePlayback}
-              className="h-10 w-10"
-              aria-label={isPlaying ? "Pause sound" : "Play sound"}
-            >
-              {isPlaying ? (
-                <RotateCcw className="h-5 w-5" />
-              ) : (
-                <Play className="h-5 w-5" />
-              )}
-            </Button>
-          </div>
+          <div className="flex gap-2"></div>
         </CardTitle>
         <CardDescription>
           Adjust the sliders to mix your perfect focus sound environment
@@ -614,11 +730,30 @@ export default function FocusSoundMixer() {
             </div>
 
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between mb-2">
                 <Label htmlFor="nature-volume">Volume</Label>
-                <span className="text-sm text-muted-foreground w-8 text-right">
-                  {natureVolume}%
-                </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => toggleCategoryPlayback("nature")}
+                    className="h-8 w-8 p-0"
+                    aria-label={
+                      playingStates.nature
+                        ? "Pause nature sound"
+                        : "Play nature sound"
+                    }
+                  >
+                    {playingStates.nature ? (
+                      <Pause className="h-4 w-4" />
+                    ) : (
+                      <Play className="h-4 w-4" />
+                    )}
+                  </Button>
+                  <span className="text-sm text-muted-foreground w-8 text-right">
+                    {natureVolume}%
+                  </span>
+                </div>
               </div>
               <Slider
                 id="nature-volume"
@@ -644,7 +779,9 @@ export default function FocusSoundMixer() {
                 <Button
                   key={track.id}
                   variant={
-                    selectedTracks.whiteNoise === track.id ? "default" : "outline"
+                    selectedTracks.whiteNoise === track.id
+                      ? "default"
+                      : "outline"
                   }
                   onClick={() => handleTrackChange("whiteNoise", track.id)}
                   className={`w-full flex items-center justify-center text-xs md:text-sm py-1.5 md:py-2 px-1 md:px-3 h-auto ${
@@ -662,11 +799,30 @@ export default function FocusSoundMixer() {
             </div>
 
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between mb-2">
                 <Label htmlFor="whitenoise-volume">Volume</Label>
-                <span className="text-sm text-muted-foreground w-8 text-right">
-                  {whiteNoiseVolume}%
-                </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => toggleCategoryPlayback("whiteNoise")}
+                    className="h-8 w-8 p-0"
+                    aria-label={
+                      playingStates.whiteNoise
+                        ? "Pause white noise sound"
+                        : "Play white noise sound"
+                    }
+                  >
+                    {playingStates.whiteNoise ? (
+                      <Pause className="h-4 w-4" />
+                    ) : (
+                      <Play className="h-4 w-4" />
+                    )}
+                  </Button>
+                  <span className="text-sm text-muted-foreground w-8 text-right">
+                    {whiteNoiseVolume}%
+                  </span>
+                </div>
               </div>
               <Slider
                 id="whitenoise-volume"
@@ -710,11 +866,30 @@ export default function FocusSoundMixer() {
             </div>
 
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between mb-2">
                 <Label htmlFor="melody-volume">Volume</Label>
-                <span className="text-sm text-muted-foreground w-8 text-right">
-                  {melodyVolume}%
-                </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => toggleCategoryPlayback("melody")}
+                    className="h-8 w-8 p-0"
+                    aria-label={
+                      playingStates.melody
+                        ? "Pause melody sound"
+                        : "Play melody sound"
+                    }
+                  >
+                    {playingStates.melody ? (
+                      <Pause className="h-4 w-4" />
+                    ) : (
+                      <Play className="h-4 w-4" />
+                    )}
+                  </Button>
+                  <span className="text-sm text-muted-foreground w-8 text-right">
+                    {melodyVolume}%
+                  </span>
+                </div>
               </div>
               <Slider
                 id="melody-volume"
@@ -742,7 +917,6 @@ export default function FocusSoundMixer() {
         </p>
 
         <ClientOnly>
-
           {!audioContextUnlocked && isMounted && (
             <div className="text-xs text-amber-500 text-center mt-2">
               <p>Tap anywhere on the page to enable audio playback</p>
